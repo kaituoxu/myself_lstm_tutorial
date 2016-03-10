@@ -1,0 +1,181 @@
+\documentclass[UTF8]{article}
+    \usepackage{CTEX}
+    \usepackage{amsmath}
+    \usepackage{amssymb}
+    \title{LSTM公式推导}
+    \date{}
+\begin{document}
+    \maketitle
+    \section{Forward Pass}
+        \textbf{Hidden Layer}
+
+        \emph{Input Gates}
+        \begin{align}
+        & a_\iota^t=\sum_{i=1}^Iw_{i\iota}x_i^t+\sum_{h=1}^Hw_{h\iota}b_h^{t-1}+\sum_{c=1}^Cw_{c\iota}s_c^{t-1} \\
+        & b_\iota^t=f(a_\iota^t)
+        \end{align}
+
+        \emph{Forget Gates}
+        \begin{align}
+        & a_\phi^t=\sum_{i=1}^Iw_{i\phi}x_i^t+\sum_{h=1}^Hw_{h\phi}b_h^{t-1}+\sum_{c=1}^Cw_{c\phi}s_c^{t-1} \\
+        & b_\phi^t=f(a_\phi^t)
+        \end{align}
+
+        \emph{Cells}
+        \begin{align}
+        & a_c^t=\sum_{i=1}^Iw_{ic}x_i^t+\sum_{h=1}^Hw_{hc}b_h^{t-1} \\
+        & s_c^t=b_\phi^t s_c^{t-1} + b_\iota^tg(a_c^t)
+        \end{align}
+
+        \emph{Output Gates}
+        \begin{align}
+        & a_\omega^t=\sum_{i=1}^Iw_{i\omega}x_i^t+\sum_{h=1}^Hw_{h\omega}b_h^{t-1}+\sum_{c=1}^Cw_{c\omega}s_c^{t} \\
+        & b_\omega^t=f(a_\omega^t)
+        \end{align}
+
+        \emph{Cell Outputs}
+        \begin{align}
+        & b_c^t=b_w^th(s_c^t)
+        \end{align}
+
+        \textbf{Output-Layer}
+        \begin{align}
+        & a_k^t=\sum_{c=1}^C w_{ck} b_c^t
+        \end{align}
+
+    \section{Backward Pass}
+        \textbf{Multi-class tasks.}
+
+        \emph{Network Outputs}
+        \begin{align}
+        & y_k^t = P(C_k | x) = \frac{e^{a_k^t}}{\sum_{k'=1}^K e^{a_{k'}^t}}
+        \end{align}
+
+        \emph{Loss function}
+        \begin{align}
+        & \mathcal{L}^t=-\sum_{k=1}^K z_k^t \ln y_k^t \notag \\
+        & \mathcal{L}=-\sum_{t=1}^T(\sum_{k=1}^K z_k^t \ln y_k^t)
+        \end{align}
+
+        \emph{Gradient descent}
+        \begin{align}
+        & \delta_j^t\stackrel{def}{=} \frac{\partial \mathcal{L}}{\partial a_j^t} \notag \\
+        & w_{ij}^{(m+1)}=w_{ij}^{(m)}-\alpha \Delta w_{ij} \\
+        & \Delta w_{ij}=\frac{\partial \mathcal{L}}{\partial w_{ij}}
+        =\sum_{t=1}^T\frac{\partial \mathcal{L}}{\partial a_j^t}\frac{\partial a_j^t}{\partial w_{ij}}
+        =\sum_{t=1}^T\delta_j^t \frac{\partial a_j^t}{\partial w_{ij}}
+        \end{align}
+
+        \textbf{Output Layer}
+        \begin{align}
+         \Delta w_{ck} &= \sum_{t=1}^T \delta_k^t b_c^t \\
+         \delta_k^t
+            &= \frac{\partial \mathcal{L}}{\partial a_k^t} \notag
+            = \frac{\partial \big(-\sum_{t'=1}^T(\sum_{k'=1}^K z_{k'}^{t'} \ln y_{k'}^{t'})\big)}{\partial a_k^t} \notag\\
+            &= \frac{\partial (-\sum_{k'=1}^K z_{k'}^{t} \ln y_{k'}^{t})}{\partial a_k^t} \notag\\
+            &= \frac{\partial \sum_{k'=1}^K z_{k'}^{t} \ln \sum_{k''=1}^K e^{a_{k''}^t}}{\partial a_k^t}
+            - \frac{\partial \sum_{k'=1}^K z_{k'}^{t} \ln e^{a_{k'}^t}}{\partial a_k^t} \notag \\
+            &= \frac{\partial ( \ln \sum_{k''=1}^K e^{a_{k''}^t}) \sum_{k'=1}^K z_{k'}^{t} }{\partial a_k^t}
+            - \frac{\partial \sum_{k'=1}^K z_{k'}^{t} a_{k'}^t}{\partial a_k^t} \notag \\
+            &= \frac{e^{a_k^t}}{\sum_{k''=1}^K e^{a_{k''}^t}} - z_k^t \notag \\
+            &= y_k^t - z_k^t
+        \end{align}
+
+        \textbf{Hidden Layer}
+
+        此时要更新的参数如下：
+        $w_{iw}$、$w_{hw}$、$w_{cw}$、
+        $w_{ic}$、$w_{hc}$、
+        $w_{i\phi}$、$w_{h\phi}$、$w_{c\phi}$、
+        $w_{i\iota}$、$w_{h\iota}$、$w_{c\iota}$.
+
+        Part 1
+        \begin{align}
+        & \Delta w_{iw} = \frac{\partial \mathcal{L}}{\partial w_{iw}}
+        = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial a_w^t}\frac{\partial a_w^t}{\partial w_{iw}}
+        = \sum_{t=1}^T \delta_w^t x_i^t \notag \\
+        & \Delta w_{hw} = \sum_{t=1}^T \delta_w^t b_h^{t-1} \notag \\
+        & \Delta w_{cw} = \sum_{t=1}^T \delta_w^t s_c^t \notag \\
+        & \epsilon_c^t\stackrel{def}{=} \frac{\partial \mathcal{L}}{\partial b_c^t} \notag
+        \end{align}
+
+        暂且认为$b_c^t$与$b_h^t$是一回事。$a_k^t$、$a_\iota^{t+1}$、$a_\phi^{t+1}$、$a_c{t+1}$、$a_\omega^{t+1}$均与$b_c^t$有关，
+        且$\mathcal{L}$与$a_\iota^{t+1}$、$a_\phi^{t+1}$、$a_c{t+1}$、$a_\omega^{t+1}$有关，且将这四部分合在一起，用g索引，G=4H。
+        由多元函数链式求导法得
+        
+        \emph{Cell Outputs}
+        \begin{align}
+        \epsilon_c^t &= \sum_{k=1}^K \frac{\partial \mathcal{L}}{\partial a_k^t} \frac{\partial a_k^t}{\partial b_c^t}
+        + \sum_{g=1}^G \frac{\partial \mathcal{L}}{\partial a_g^{t+1}} \frac{\partial a_g^{t+1}}{\partial b_c^t} \notag \\
+        &= \sum_{k=1}^K \delta_k^t w_{ck} + \sum_{g=1}^G \delta_g^{t+1} w_{cg}
+        \end{align}
+
+        \emph{Output Gates}
+        \begin{align}
+        \delta_w^t = \frac{\partial \mathcal{L}}{\partial a_w^t}
+        &= \sum_{c=1}^C \frac{\partial \mathcal{L}}{\partial b_c^t} \frac{\partial b_c^t}{\partial b_w^t} \frac{\partial b_w^t}{\partial a_w^t} \notag \\
+        &= f'(a_w^t)\sum_{c=1}^C \epsilon_c^t h(s_c^t)
+        \end{align}
+
+        Part 2
+        \begin{align}
+        & \Delta w_{ic} = \frac{\partial \mathcal{L}}{\partial w_{ic}}
+        = \sum_{t=1}^T \frac{\partial \mathcal{L}}{\partial a_c^t}\frac{\partial a_c^t}{\partial w_{ic}}
+        = \sum_{t=1}^T \delta_c^t x_i^t \notag \\
+        & \Delta w_{hc} = \sum_{t=1}^T \delta_c^t b_h^{t-1} \notag \\
+        & \epsilon_s^t\stackrel{def}{=} \frac{\partial \mathcal{L}}{\partial s_c^t} \notag
+        \end{align}
+        
+        $a_\iota^{t+1}$、$a_\phi^{t+1}$、$s_c{t+1}$、$a_\omega^{t}$、$b_c^t$均与$s_c^t$有关
+        
+        \emph{States}
+        \begin{align}
+        \epsilon_s^t &=  \frac{\partial \mathcal{L}^{t}}{\partial b_c^t} \frac{\partial b_c^{t}}{\partial s_c^t} 
+        + \frac{\partial \mathcal{L}^{t+1}}{\partial s_c^{t+1}} \frac{\partial s_c^{t+1}}{\partial s_c^t} 
+        + \frac{\partial \mathcal{L}^{t+1}}{\partial a_\iota^{t+1}} \frac{\partial a_\iota^{t+1}}{\partial s_c^t} \notag  \\
+        &+ \frac{\partial \mathcal{L}^{t+1}}{\partial a_\phi^{t+1}} \frac{\partial a_\phi^{t+1}}{\partial s_c^t}
+        + \frac{\partial \mathcal{L}^{t}}{\partial a_\omega^{t}} \frac{\partial a_\omega^{t}}{\partial s_c^t}   \notag \\
+        &=  b_w^t h'(s_c^t) \epsilon_c^t + b_\phi^{t+1} \epsilon_s^{t+1} + w_{c\iota} \delta_\iota^{t+1} + w_{c\phi} \delta_\phi^{t+1} + w_{c\omega} \delta_\omega^{t}
+        \end{align}
+        
+        \emph{Cells}
+        \begin{align}
+        \delta_c^t &= \frac{\partial \mathcal{L}}{\partial a_c^t}
+        = \frac{\partial \mathcal{L}}{\partial s_c^t} \frac{\partial s_c^t}{\partial a_c^t}
+        = \epsilon_c^t b_\iota^t g'(a_c^t)
+        \end{align}
+        
+        Part 3
+
+        \begin{align}
+        & \Delta w_{i\phi} = \frac{\partial \mathcal{L}}{\partial w_{i\phi}}
+        = \sum_{t=1}^T \delta_\phi^t x_i^t \notag \\
+        & \Delta w_{h\phi} = \sum_{t=1}^T \delta_\phi^t b_h^{t-1} \notag \\
+        & \Delta w_{c\phi} = \sum_{t=1}^T \delta_\phi^t s_c^{t-1} \notag 
+        \end{align}
+        
+        \emph{Forget Gates}
+        \begin{align}
+        \delta_\phi^t &= \frac{\partial \mathcal{L}}{\partial a_\phi^t}
+        = \sum_{c=1}^C \frac{\partial \mathcal{L}}{\partial s_c^t} \frac{\partial s_c^t}{\partial b_\phi^t} \frac{\partial b_\phi^t}{\partial a_\phi^t}
+        = f'(a_\phi^t) \sum_{c=1}^C s_c^{t-1} \epsilon_s^t
+        \end{align}
+        
+        Part 4
+
+        \begin{align}
+        & \Delta w_{i\iota} = \frac{\partial \mathcal{L}}{\partial w_{i\iota}}
+        = \sum_{t=1}^T \delta_\iota^t x_i^t \notag \\
+        & \Delta w_{h\iota} = \sum_{t=1}^T \delta_\iota^t b_h^{t-1} \notag \\
+        & \Delta w_{c\iota} = \sum_{t=1}^T \delta_\iota^t s_c^{t-1} \notag 
+        \end{align}
+        
+        \emph{Input Gates}
+        \begin{align}
+        \delta_\iota^t &= \frac{\partial \mathcal{L}}{\partial a_\iota^t}
+        = \sum_{c=1}^C \frac{\partial \mathcal{L}}{\partial s_c^t} \frac{\partial s_c^t}{\partial b_\iota^t} \frac{\partial b_\iota^t}{\partial a_\iota^t}
+        = f'(a_\iota^t) \sum_{c=1}^C g(a_c^{t}) \epsilon_s^t
+        \end{align}
+
+
+\end{document}
